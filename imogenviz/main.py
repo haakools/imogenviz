@@ -12,6 +12,33 @@ from limbs import (
 
 from pad_drone import PAD 
 
+
+
+chord_progression = [
+    ("C", "major", 4),
+    ("F", "maj7", 4),
+    ("G", "dom7", 4),
+    ("A", "minor", 4)
+]
+
+# Function to process signal and play next chord
+def process_chord_signal(pad, signal_value, current_index, last_played_time, timeout=2.0, threshold=0.5):
+    current_time = time.time()
+    
+    if signal_value > threshold and (current_time - last_played_time) >= timeout:
+        # Play the next chord
+        chord = chord_progression[current_index]
+        pad.play_chord(*chord)
+        
+        # Update tracking variables
+        last_played_time = current_time
+        current_index = (current_index + 1) % len(chord_progression)
+        return current_index, last_played_time, True
+    
+    return current_index, last_played_time, False
+
+
+
 def main():
 
     ctime = 0
@@ -29,12 +56,18 @@ def main():
     print("Press 'q' to quit")
 
     # make this play only on signal that it should play / change
+
     pad.play_chord("F", "maj7", 4)
+    current_index = 0
+    last_played_time = 0
+    timeout = 2.0
+
 
     thumb = None
     index_finger = None
     thumb_index_distance: float = 0.0
     resonance: float = 0.0
+    ptime = 0
 
     while True:
         ret, frame = cap.read()
@@ -66,16 +99,20 @@ def main():
         thumb_index_distance = max(15, min(200, thumb_index_distance))
         cutoff_freq = float(20000 - (np.log(thumb_index_distance/15)/np.log(200/15)) * 19990)
 
-
         # normalized between 55-110 and poor mans clamp
-        resonance = max(0, (average_distance(right_limb_list)-20)/(150-20))
+        distance_hands = max(0, (average_distance(right_limb_list)-20)/(150-20))
 
-        print(f"cutoff_freq: {cutoff_freq}") 
-        print(f"resonance: {resonance}") 
-        # cutoff_freq: Cutoff frequency in Hz (20-20000)
-        # resonance: Resonance amount (0.0-1.0)
+        if distance_hands > 0.8 and ( ctime - last_played_time) >= timeout:
+            chord = chord_progression[current_index]
+            pad.play_chord(*chord)
+        
+            # Update tracking variables
+            last_played_time = ctime
+            current_index = (current_index + 1) % len(chord_progression)
+        
+            print(f"Playing chord: {chord}")
 
-        pad.set_filter(cutoff_freq, resonance=resonance)
+        pad.set_filter(cutoff_freq)
 
         if not ret:
             print("Error: Can't receive frame. Exiting...")
