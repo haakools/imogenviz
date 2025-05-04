@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from enum import Enum
+import math as math
 
 
 class LimbIndex(Enum):
@@ -31,8 +32,8 @@ class LimbIndex(Enum):
 @dataclass
 class LimbPosition:
     index: LimbIndex
-    x: int = None
-    y: int = None
+    x: int = 0
+    y: int = 0
 
     def __str__(self):
         return f"{self.index.name} - (x,y) = {(self.x), (self.y)}"
@@ -41,4 +42,36 @@ class LimbPosition:
         return self.__str__()
 
     def xypos(self) -> tuple[int,int]:
-        return x, y
+        return self.x, self.y
+
+def r2distance(pos1: LimbPosition, pos2: LimbPosition) -> float:
+    """Calculate Euclidean distance between two LimbPosition objects"""
+    if (pos1 is None) or (pos2 is None):
+        return 0.0
+    
+    if pos1.x is None or pos1.y is None or pos2.x is None or pos2.y is None:
+        raise ValueError("Cannot calculate distance with None coordinates")
+        
+    return math.sqrt((pos2.x - pos1.x) ** 2 + (pos2.y - pos1.y) ** 2)
+
+def average_distance(positions: list[LimbPosition]) -> float:
+    """Calculate average pairwise distance between all LimbPosition objects"""
+    if positions is None:
+        return 0.0
+    
+    if len(positions) == 0:
+        return 0.0
+    
+    if len(positions) < 2:
+        raise ValueError("Need at least 2 positions to calculate average distance")
+        
+    total_distance = 0
+    num_pairs = 0
+    
+    for i in range(len(positions)):
+        for j in range(i + 1, len(positions)):
+            total_distance += r2distance(positions[i], positions[j])
+            num_pairs += 1
+            
+    return total_distance / num_pairs
+

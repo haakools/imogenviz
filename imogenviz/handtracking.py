@@ -1,5 +1,5 @@
-import cv2
 import mediapipe as mp
+import cv2
 import time
 import math as math
 from limbs import (
@@ -50,8 +50,8 @@ class HandTrackingDynamic:
             xmin, xmax = min(xList), max(xList)
             ymin, ymax = min(yList), max(yList)
             bbox = xmin, ymin, xmax, ymax
-            print( "Hands Keypoint")
-            print(bbox)
+            #print( "Hands Keypoint")
+            #print(bbox)
             if draw:
                 cv2.rectangle(frame, (xmin - 20, ymin - 20),(xmax + 20, ymax + 20),
                                (0, 255 , 0) , 2)
@@ -88,52 +88,3 @@ class HandTrackingDynamic:
         len= math.hypot(x2-x1,y2-y1)
 
         return len, frame , [x1, y1, x2, y2, cx, cy]
-
-
-def main():
-
-    ctime = 0
-    ptime = 0
-    cap = cv2.VideoCapture(0)
-    detector = HandTrackingDynamic()
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
-    
-    if not cap.isOpened():
-        print("Error: Could not open camera.")
-        return
-    
-    print("Press 'q' to quit")
-    
-    while True:
-        ret, frame = cap.read()
-        frame = detector.findFingers(frame) 
-        # todo make this return enum for fingers. if None it was not found
-        limb_list = detector.findPosition(frame)
-
-
-        # thumb (4) and point (8)
-        for limb in limb_list:
-            print(limb, type(limb))
-            pass 
-
-        if not ret:
-            print("Error: Can't receive frame. Exiting...")
-            break
-        ctime = time.time()
-        fps =1/(ctime-ptime)
-        ptime = ctime
-
-        cv2.putText(frame, str(int(fps)), (10,70), cv2.FONT_HERSHEY_PLAIN,3,(255,0,255),3)
-
-        cv2.imshow('Camera :)', frame)
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    
-    cap.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
