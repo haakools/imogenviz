@@ -69,21 +69,17 @@ def main():
             print("ERROR: ", e)
             limb_list_two = []
 
-        # Checking which is which
+        # default guess, left limb always defined
+        left_limb_list = limb_list_one
+        right_limb_list = limb_list_two
+
+        # assigning left hand to left part of screen, right to right
         if len(limb_list_two) > 0:
-            print(limb_list_one[0].x , limb_list_two[0].x)
             if limb_list_one[0].x > limb_list_two[0].x:
-                left_limb_list = limb_list_one
-                right_limb_list = limb_list_two
-            else:
-                left_limb_list = limb_list_one
-                right_limb_list = limb_list_two
-        else:
-            left_limb_list = limb_list_two
-            right_limb_list = limb_list_one
+                left_limb_list = limb_list_two
+                right_limb_list = limb_list_one
 
         for limb in left_limb_list:
-            print(limb)
             if limb.index == LimbIndex.THUMB_TIP:
                 thumb = limb
                 print(thumb)
@@ -95,6 +91,7 @@ def main():
                 print(index_finger_pip)
        
         if (index_finger_pip.y > index_finger.y) and ( ctime - kick_last_played) >= timeout:
+            drums.play_kick()
             drums.play_kick()
             kick_last_played = ctime
 
@@ -118,7 +115,6 @@ def main():
             current_index = (current_index + 1) % len(chord_progression)
         
             print(f"Playing chord: {chord}")
-
 
         pad.set_filter(cutoff_freq)
 

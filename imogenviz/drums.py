@@ -9,42 +9,44 @@ snare_path = "imogenviz/soundbank/snare-analog.wav"
 
 class Drums:
     def __init__(self, server=None):
-        # Load drum samples into SndTable objects
+        # Load samples into tables
         self.kick = SndTable(kick_path)
         self.snare = SndTable(snare_path)
         self.hihat = SndTable(hihat_path)
         self.clap = SndTable(clap_path)
         
-        # Create TableRead objects to play the samples
-        self.kick_player = TableRead(self.kick, freq=self.kick.getRate(), loop=False, mul=0.7)
-        self.snare_player = TableRead(self.snare, freq=self.snare.getRate(), loop=False, mul=0.7)
-        self.hihat_player = TableRead(self.hihat, freq=self.hihat.getRate(), loop=False, mul=0.7)
-        self.clap_player = TableRead(self.clap, freq=self.clap.getRate(), loop=False, mul=0.7)
+        # Create metro objects (set to 0 so they don't trigger automatically)
+        self.kick_metro = Metro(time=0)
+        self.snare_metro = Metro(time=0)
+        self.hihat_metro = Metro(time=0)
+        self.clap_metro = Metro(time=0)
         
-        # Connect to audio output
-        self.kick_player.out()
-        self.snare_player.out()
-        self.hihat_player.out()
-        self.clap_player.out()
-
+        # Create triggers that will play the sounds
+        self.kick_trig = TrigEnv(self.kick_metro, table=self.kick, dur=self.kick.getDur(), mul=0.7)
+        self.snare_trig = TrigEnv(self.snare_metro, table=self.snare, dur=self.snare.getDur(), mul=0.7)
+        self.hihat_trig = TrigEnv(self.hihat_metro, table=self.hihat, dur=self.hihat.getDur(), mul=0.7)
+        self.clap_trig = TrigEnv(self.clap_metro, table=self.clap, dur=self.clap.getDur(), mul=0.7)
+        
+        # Connect to output
+        self.kick_trig.out()
+        self.snare_trig.out()
+        self.hihat_trig.out()
+        self.clap_trig.out()
+    
     def play_kick(self):
         print("playing kick")
-        self.kick_player.stop()
-        self.kick_player.play()
+        # Send a single trigger
+        self.kick_metro.play(0)
     
     def play_snare(self):
         print("playing snare")
-        self.snare_player.stop()
-        self.snare_player.play()
+        self.snare_metro.play(0)
     
     def play_hihat(self):
         print("playing hihat")
-        self.hihat_player.stop()
-        self.hihat_player.play()
-
+        self.hihat_metro.play(0)
+        
     def play_clap(self):
         print("playing clap")
-        self.clap_player.stop()
-        self.clap_player.play()
-
+        self.clap_metro.play(0)
 
