@@ -3,41 +3,26 @@ import numpy as np
 import time
 import math as math
 from handtracking import HandTrackingDynamic
+from pyo_server import setup_server, close_server
 from limbs import (
         LimbIndex,
         LimbPosition,
         r2distance,
-        average_distance
+        average_distance,
+        calculate_center_of_mass
         )
-
+from drums import Drums
 from pad_drone import PAD 
 
 
 
 chord_progression = [
     ("C", "major", 4),
+    ("F", "sus4", 4),
     ("F", "maj7", 4),
     ("G", "dom7", 4),
     ("A", "minor", 4)
 ]
-
-# Function to process signal and play next chord
-def process_chord_signal(pad, signal_value, current_index, last_played_time, timeout=2.0, threshold=0.5):
-    current_time = time.time()
-    
-    if signal_value > threshold and (current_time - last_played_time) >= timeout:
-        # Play the next chord
-        chord = chord_progression[current_index]
-        pad.play_chord(*chord)
-        
-        # Update tracking variables
-        last_played_time = current_time
-        current_index = (current_index + 1) % len(chord_progression)
-        return current_index, last_played_time, True
-    
-    return current_index, last_played_time, False
-
-
 
 def main():
 
@@ -47,7 +32,10 @@ def main():
     detector = HandTrackingDynamic()
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    pad = PAD(server=None) # start server
+    
+    server = setup_server()
+    pad = PAD(server=server)
+    drums = Drums(server=server)
     
     if not cap.isOpened():
         print("Error: Could not open camera.")
@@ -55,35 +43,44 @@ def main():
     
     print("Press 'q' to quit")
 
-    # make this play only on signal that it should play / change
-
     pad.play_chord("F", "maj7", 4)
+    # Chord and cooldown values
     current_index = 0
     last_played_time = 0
-    timeout = 2.0
-
-
-    thumb = None
-    index_finger = None
+    kick_last_played = 0
+    timeout = 1.0
+    ptime = 0
+   
+    # finger values
+    thumb = LimbPosition()
+    index_finger = LimbPosition()
+    index_finger_pip = LimbPosition()
     thumb_index_distance: float = 0.0
     resonance: float = 0.0
-    ptime = 0
 
     while True:
         ret, frame = cap.read()
         frame = detector.findFingers(frame) 
-        left_limb_list, bbox_left = detector.findPosition(frame, handNo=0)
-        #print("Length of left limb list:", len(left_limb_list)) 
-        #print(left_limb_list)
-        #print(25*"-")
+
+        limb_list_one, bbox_left = detector.findPosition(frame, handNo=0)
         try:  
-            right_limb_list, bbox_right = detector.findPosition(frame, handNo=1)
-            #print("Length of right limb list:", len(right_limb_list)) 
-            #print(right_limb_list)
-            #print(25*"-")
+            limb_list_two, bbox_right = detector.findPosition(frame, handNo=1)
         except Exception as e:
             print("ERROR: ", e)
-            right_limb_list = []
+            limb_list_two = []
+
+        # Checking which is which
+        if len(limb_list_two) > 0:
+            print(limb_list_one[0].x , limb_list_two[0].x)
+            if limb_list_one[0].x > limb_list_two[0].x:
+                left_limb_list = limb_list_one
+                right_limb_list = limb_list_two
+            else:
+                left_limb_list = limb_list_one
+                right_limb_list = limb_list_two
+        else:
+            left_limb_list = limb_list_two
+            right_limb_list = limb_list_one
 
         for limb in left_limb_list:
             print(limb)
@@ -93,6 +90,14 @@ def main():
             if limb.index == LimbIndex.INDEX_FINGER_TIP:
                 index_finger = limb
                 print(index_finger)
+            if limb.index == LimbIndex.INDEX_FINGER_PIP:
+                index_finger_pip = limb
+                print(index_finger_pip)
+       
+        if (index_finger_pip.y > index_finger.y) and ( ctime - kick_last_played) >= timeout:
+            drums.play_kick()
+            kick_last_played = ctime
+
         # goes from 15 to 200 -> map so its a logarithmic scale from 10 to 20000
         thumb_index_distance = r2distance(thumb, index_finger)
         print(f"thumb_index_distance: {thumb_index_distance}")
@@ -101,7 +106,9 @@ def main():
 
         # normalized between 55-110 and poor mans clamp
         distance_hands = max(0, (average_distance(right_limb_list)-20)/(150-20))
+    
 
+        # todo: get multiprocessing for this
         if distance_hands > 0.8 and ( ctime - last_played_time) >= timeout:
             chord = chord_progression[current_index]
             pad.play_chord(*chord)
@@ -111,6 +118,7 @@ def main():
             current_index = (current_index + 1) % len(chord_progression)
         
             print(f"Playing chord: {chord}")
+
 
         pad.set_filter(cutoff_freq)
 

@@ -3,42 +3,11 @@ import os
 from pyo import *
 import time
 
-# Suppress ALSA error messages
-os.environ['ALSA_OUTPUT_STDERR'] = '0'
-
-# Global audio configuration (same as before)
-SAMPLING_RATE = 48000
-#OUTPUT_DEVICE = 7
-OUTPUT_DEVICE = 10
-N_CHANNELS = 2
-BUFFERSIZE = 512
-DUPLEX = 0
-#AUDIO="pa"
-AUDIO="alsa"
-
-pa_list_devices()
-
-
-
-
 class PAD:
     def __init__(self, server=None):
         # Use existing server or create a new one
-        if server is None:
-            self.server = Server(
-                sr=SAMPLING_RATE,
-                duplex=DUPLEX,
-                buffersize=BUFFERSIZE,
-                nchnls=N_CHANNELS,
-                audio=AUDIO
-            )
-            self.server.setOutputDevice(OUTPUT_DEVICE)
-            self.server.boot()
-            self.server.start()
-            self.owns_server = True
-        else:
-            self.server = server
-            self.owns_server = False
+        self.server = server
+        self.owns_server = False
         
         # Define note frequency ratios for standard tuning
         self.note_ratios = {
@@ -217,9 +186,6 @@ class PAD:
     def close(self):
         """Clean up resources"""
         self.stop_chord()
-        if self.owns_server:
-            self.server.stop()
-            self.server.shutdown()
 
 
 # Example usage:

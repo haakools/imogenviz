@@ -7,6 +7,7 @@ import math as math
 
 
 class LimbIndex(Enum):
+    UNKNOWN = -1
     WRIST = 0
     THUMB_CMC = 1
     THUMB_MCP = 2
@@ -31,7 +32,7 @@ class LimbIndex(Enum):
 
 @dataclass
 class LimbPosition:
-    index: LimbIndex
+    index: LimbIndex = LimbIndex.UNKNOWN
     x: int = 0
     y: int = 0
 
@@ -74,4 +75,34 @@ def average_distance(positions: list[LimbPosition]) -> float:
             num_pairs += 1
             
     return total_distance / num_pairs
+
+def calculate_center_of_mass(positions: list[LimbPosition]) -> tuple[float, float]:
+    if positions is None or len(positions) == 0:
+        return 0.0, 0.0
+    
+    # Initialize sums
+    sum_x = 0
+    sum_y = 0
+    valid_positions = 0
+    
+    # Sum all valid coordinates
+    for pos in positions:
+        if pos is None or pos.x is None or pos.y is None:
+            continue
+            
+        sum_x += pos.x
+        sum_y += pos.y
+        valid_positions += 1
+    
+    # Check if we have any valid positions
+    if valid_positions == 0:
+        return 0.0, 0.0
+        
+    # Calculate averages
+    avg_x = sum_x / valid_positions
+    avg_y = sum_y / valid_positions
+    
+    return (avg_x, avg_y)
+
+
 
