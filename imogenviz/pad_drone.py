@@ -8,10 +8,13 @@ os.environ['ALSA_OUTPUT_STDERR'] = '0'
 
 # Global audio configuration (same as before)
 SAMPLING_RATE = 48000
-OUTPUT_DEVICE = 7
+#OUTPUT_DEVICE = 7
+OUTPUT_DEVICE = 10
 N_CHANNELS = 2
 BUFFERSIZE = 512
 DUPLEX = 0
+#AUDIO="pa"
+AUDIO="alsa"
 
 pa_list_devices()
 
@@ -27,7 +30,7 @@ class PAD:
                 duplex=DUPLEX,
                 buffersize=BUFFERSIZE,
                 nchnls=N_CHANNELS,
-                audio='pa'
+                audio=AUDIO
             )
             self.server.setOutputDevice(OUTPUT_DEVICE)
             self.server.boot()
