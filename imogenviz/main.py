@@ -45,6 +45,7 @@ def main():
 
     pad.play_chord("F", "maj7", 4)
     # Chord and cooldown values
+    current_chord: Tuple = ("F", "maj7", 4)
     current_index = 0
     last_played_time = 0
     kick_last_played = 0
@@ -108,6 +109,7 @@ def main():
         # todo: get multiprocessing for this
         if distance_hands > 0.8 and ( ctime - last_played_time) >= timeout:
             chord = chord_progression[current_index]
+            current_chord = chord
             pad.play_chord(*chord)
         
             # Update tracking variables
@@ -126,6 +128,11 @@ def main():
         ptime = ctime
 
         cv2.putText(frame, str(int(fps)), (10,70), cv2.FONT_HERSHEY_PLAIN,3,(255,0,255),3)
+        cv2.putText(
+                frame, 
+                str(current_chord[0]) + str(current_chord[1]) + " - octave:" + str(current_chord[2]),
+                (10,140), cv2.FONT_HERSHEY_PLAIN,3,(255,0,255),3)
+
 
         cv2.imshow('Camera :)', frame)
         
