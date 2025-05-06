@@ -14,7 +14,7 @@ class HandTrackingDynamic:
         self.__detectionCon__   =   detectionCon
         self.__trackCon__   =   trackCon
         self.handsMp = mp.solutions.hands
-        self.hands = self.handsMp.Hands()
+        self.hands = self.handsMp.Hands(model_complexity=0)
         self.mpDraw= mp.solutions.drawing_utils
         self.tipIds = [4, 8, 12, 16, 20]
 
@@ -24,7 +24,8 @@ class HandTrackingDynamic:
         if self.results.multi_hand_landmarks: 
             for handLms in self.results.multi_hand_landmarks:
                 if draw:
-                    self.mpDraw.draw_landmarks(frame, handLms,self.handsMp.HAND_CONNECTIONS)
+                    self.mpDraw.draw_landmarks(
+                            frame, handLms,self.handsMp.HAND_CONNECTIONS)
 
         return frame
 

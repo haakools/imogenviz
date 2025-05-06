@@ -21,6 +21,8 @@ and enough support/libraries needed.
  - Ability to loop
  - Some assisted quantization to help mitigate FPS / runtime
  - General speed improvements
+    - threading
+    - mediapipe implementation (currently copied from some medium article)
  - Microphone support to add vocals
  - More instruments other than pad
 
