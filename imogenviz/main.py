@@ -13,8 +13,10 @@ from limbs import (
         )
 from drums import Drums
 from pad_drone import PAD 
-
-
+from limb_trigger import (
+        GestureData,
+        process_hand,
+    )
 
 chord_progression = [
     ("C", "major", 4),
@@ -25,44 +27,49 @@ chord_progression = [
 ]
 
 def main():
-
+    
+    # Setup camera
     ctime = 0
     ptime = 0
     cap = cv2.VideoCapture(0)
     detector = HandTrackingDynamic()
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    
+   
+    # Setup instruments
     server = setup_server()
     pad = PAD(server=server)
     drums = Drums(server=server)
-    
+   
+    # define trigger classes
+
+
     if not cap.isOpened():
         print("Error: Could not open camera.")
         return
     
     print("Press 'q' to quit")
-
-    pad.play_chord("F", "maj7", 4)
     # Chord and cooldown values
     current_chord: Tuple = ("F", "maj7", 4)
     current_index = 0
-    last_played_time = 0
-    kick_last_played = 0
-    timeout = 0.200 # seconds
-    ptime = 0
-   
-    # finger values
-    thumb = LimbPosition()
-    index_finger = LimbPosition()
-    index_finger_pip = LimbPosition()
-    thumb_index_distance: float = 0.0
-    resonance: float = 0.0
 
+    # event based cooldown values
+    last_chord_change_time = 0
+
+    last_kick_time = 0
+    last_clap_time = 0
+    last_hihat_time = 0
+    last_snare_time = 0
+
+    d_timeout = 0.8 # seconds, drums
+    p_timeout = 2 # seconds, pad
+    pad.play_chord(*current_chord)
+   
     while True:
         ret, frame = cap.read()
         frame = detector.findFingers(frame) 
 
+        # Below does not belong in main thread
         limb_list_one, bbox_left = detector.findPosition(frame, handNo=0)
         try:  
             limb_list_two, bbox_right = detector.findPosition(frame, handNo=1)
@@ -70,58 +77,51 @@ def main():
             print("ERROR: ", e)
             limb_list_two = []
 
-        # default guess, left limb always defined
         left_limb_list = limb_list_one
         right_limb_list = limb_list_two
-
         # assigning left hand to left part of screen, right to right
         if len(limb_list_two) > 0:
             if limb_list_one[0].x > limb_list_two[0].x:
                 left_limb_list = limb_list_two
                 right_limb_list = limb_list_one
 
-        for limb in left_limb_list:
-            if limb.index == LimbIndex.THUMB_TIP:
-                thumb = limb
-                print(thumb)
-            if limb.index == LimbIndex.INDEX_FINGER_TIP:
-                index_finger = limb
-                print(index_finger)
-            if limb.index == LimbIndex.INDEX_FINGER_PIP:
-                index_finger_pip = limb
-                print(index_finger_pip)
-       
-        if (index_finger_pip.y < index_finger.y) and ( ctime - kick_last_played) >= timeout:
+        left_hand: GestureData = process_hand(left_limb_list)
+        right_hand: GestureData = process_hand(right_limb_list)
+
+        # TODO MAP TO TRIGGER THREAD
+        # LEFT HAND PROCESSING -> 
+        if left_hand.index_finger_bent and ( ctime - last_kick_time) >= d_timeout:
             drums.play_kick()
-            kick_last_played = ctime
+            last_kick_time = ctime
+
+        if left_hand.ring_finger_bent and ( ctime - last_snare_time) >= d_timeout:
+            drums.play_snare()
+            last_snare_time = ctime
+       
+        if left_hand.middle_finger_bent and ( ctime - last_hihat_time) >= d_timeout:
+            drums.play_hihat()
+            last_hihat_time = ctime
+
+        # RIGHT HAND PROCESSING
 
         # goes from 15 to 200 -> map so its a logarithmic scale from 10 to 20000
-        thumb_index_distance = r2distance(thumb, index_finger)
-        print(f"thumb_index_distance: {thumb_index_distance}")
-        thumb_index_distance = max(15, min(200, thumb_index_distance))
-        cutoff_freq = float(20000 - (np.log(thumb_index_distance/15)/np.log(200/15)) * 19990)
+        cutoff_freq = float(20000 - (np.log(right_hand.thumb_index_distance/15)/np.log(200/15)) * 19990)
 
-        # normalized between 55-110 and poor mans clamp
-        distance_hands = max(0, (average_distance(right_limb_list)-20)/(150-20))
-    
-
-        # todo: get multiprocessing for this
-        if distance_hands > 0.8 and ( ctime - last_played_time) >= timeout:
+        if right_hand.hand_size > 0.8 and ( ctime - last_chord_change_time) >= p_timeout:
             chord = chord_progression[current_index]
             current_chord = chord
             pad.play_chord(*chord)
         
             # Update tracking variables
-            last_played_time = ctime
+            last_chord_change_time = ctime
             current_index = (current_index + 1) % len(chord_progression)
-        
-            print(f"Playing chord: {chord}")
 
         pad.set_filter(cutoff_freq)
 
         if not ret:
             print("Error: Can't receive frame. Exiting...")
             break
+
         ctime = time.time()
         fps =1/(ctime-ptime)
         ptime = ctime
@@ -131,7 +131,6 @@ def main():
                 frame, 
                 str(current_chord[0]) + str(current_chord[1]) + " - octave:" + str(current_chord[2]),
                 (10,140), cv2.FONT_HERSHEY_PLAIN,3,(255,0,255),3)
-
 
         cv2.imshow('Camera :)', frame)
         
