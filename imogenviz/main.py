@@ -49,7 +49,7 @@ def main():
     current_index = 0
     last_played_time = 0
     kick_last_played = 0
-    timeout = 1.0
+    timeout = 0.200 # seconds
     ptime = 0
    
     # finger values
@@ -91,8 +91,7 @@ def main():
                 index_finger_pip = limb
                 print(index_finger_pip)
        
-        if (index_finger_pip.y > index_finger.y) and ( ctime - kick_last_played) >= timeout:
-            drums.play_kick()
+        if (index_finger_pip.y < index_finger.y) and ( ctime - kick_last_played) >= timeout:
             drums.play_kick()
             kick_last_played = ctime
 

@@ -27,15 +27,20 @@ class Drums:
         self.hihat_player = TrigEnv(self.hihat_trig, table=self.hihat, dur=self.hihat.getDur(), mul=0.7)
         self.clap_player = TrigEnv(self.clap_trig, table=self.clap, dur=self.clap.getDur(), mul=0.7)
         
+        # Convert mono to stereo with proper panning
+        self.kick_pan = Pan(self.kick_player, outs=2, pan=0.5, spread=0.5)
+        self.snare_pan = Pan(self.snare_player, outs=2, pan=0.5, spread=0.5)
+        self.hihat_pan = Pan(self.hihat_player, outs=2, pan=0.5, spread=0.5)
+        self.clap_pan = Pan(self.clap_player, outs=2, pan=0.5, spread=0.5)
+        
         # Connect to output
-        self.kick_player.out()
-        self.snare_player.out()
-        self.hihat_player.out()
-        self.clap_player.out()
+        self.kick_pan.out()
+        self.snare_pan.out()
+        self.hihat_pan.out()
+        self.clap_pan.out()
     
     def play_kick(self):
         print("playing kick")
-        # Send a single trigger
         self.kick_trig.play()
     
     def play_snare(self):
@@ -56,7 +61,6 @@ if __name__ == "__main__":
     server = setup_server()
     drums = Drums(server)
     
-    # Wait for server to initialize
     time.sleep(1)
     
     print("Testing drums...")
@@ -68,9 +72,6 @@ if __name__ == "__main__":
     time.sleep(1)
     drums.play_clap()
     time.sleep(1)
-    
-    # Keep the server running for a few seconds to hear all sounds
-    time.sleep(5)
     
     print("Closing server...")
     close_server(server)
